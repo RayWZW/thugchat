@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <h1>Welcome to the Chat App</h1>
+        <div id="chatbox-container"></div>
+    </div>
+
+    <script>
+        const loadChatbox = () => {
+            fetch('chatbox.html')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('chatbox-container').innerHTML = html;
+                    initializeChat();
+                })
+                .catch(error => {
+                    console.error('Error loading chatbox:', error);
+                });
+        };
+
+        const initializeChat = () => {
+            const socket = io();
+            const form = document.getElementById('form');
+            const input = document.getElementById('input');
+            const usernameInput = document.getElementById('username');
+            const messagesList = document.getElementById('messages');
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                if (input.value && usernameInput.value) {
+                    const message = {
+                        username: usernameInput.value,
+                        text: input.value
+                    };
+                    socket.emit('chat message', message);
+                    input.value = '';
+                }
+            });
+
+            socket.on('chat message', function(msg) {
+                const item = document.createElement('li');
+                item.textContent = `[${new Date(msg.timestamp).toLocaleString()}] ${msg.username}: ${msg.text}`;
+                messagesList.appendChild(item);
+                window.scrollTo(0, document.body.scrollHeight);
+            });
+
+            socket.on('chat history', function(messages) {
+                messages.forEach(function(msg) {
+                    const item = document.createElement('li');
+                    item.textContent = `[${new Date(msg.timestamp).toLocaleString()}] ${msg.username}: ${msg.text}`;
+                    messagesList.appendChild(item);
+                });
+                window.scrollTo(0, document.body.scrollHeight);
+            });
+
+            socket.on('error', function(msg) {
+                console.error(msg);
+            });
+        };
+
+        loadChatbox();
+    </script>
+</body>
+</html>
